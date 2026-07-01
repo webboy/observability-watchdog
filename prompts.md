@@ -125,3 +125,22 @@ Please generate the sample dataset files data/sample_logs.jsonl (normal operatio
 - Generated `data/sample_logs.jsonl` with 540 ECS-compatible events across all five e-commerce services (90 minutes of normal operations, low error rates).
 - Generated `data/sample_incident_logs.jsonl` with 1040 events spanning baseline (10:00–11:20), payment incident spike on `/payments/charge` (11:30–11:50), and recovery (12:00–13:00).
 - Validated both files with the ECS parser (0 rejected lines).
+
+## 2026-07-01 14:30 UTC+2
+
+**Prompt**
+
+Phase 3: Background Post-Processing And Anomaly Detection — Implement the plan (BackgroundTasks, metrics aggregator, anomaly detection, ingestion run polling, tests).
+
+**Elapsed time:** 01:06
+
+**Changes**
+
+- Added models: `MetricWindow`, `AnomalyRule`, `Anomaly` and migration `0002_add_metrics_and_anomalies`.
+- Added services: `metrics_aggregator.py`, `anomaly_detection_service.py`, `background_processing_service.py`, `window_utils.py`.
+- Added repositories: `metric_window_repository`, `anomaly_rule_repository`, `anomaly_repository`.
+- Integrated FastAPI `BackgroundTasks` into ingestion endpoints; runs stay `processing` until background completes.
+- Added `GET /api/v1/apps/{app_id}/ingestion-runs/{ingestion_run_id}` polling endpoint.
+- Seeded global default anomaly rules via migration and `app/seeds/anomaly_rules.py`.
+- Added tests: `test_metric_aggregation.py`, `test_anomaly_detection.py`, `test_background_processing.py`; updated ingestion tests.
+- Verified: 33/33 pytest tests passed.

@@ -47,7 +47,12 @@ def test_batch_ingestion_inserts_valid_events(client: TestClient) -> None:
     assert payload["accepted_events"] == 2
     assert payload["rejected_events"] == 0
     assert payload["skipped_duplicates"] == 0
-    assert payload["status"] == "completed"
+    assert payload["status"] == "processing"
+
+    status_response = client.get(
+        f"/api/v1/apps/{app_id}/ingestion-runs/{payload['ingestion_run_id']}"
+    )
+    assert status_response.json()["status"] == "completed"
 
 
 def test_duplicate_batch_increments_skipped_duplicates(client: TestClient) -> None:
@@ -59,8 +64,10 @@ def test_duplicate_batch_increments_skipped_duplicates(client: TestClient) -> No
     second = client.post(f"/api/v1/apps/{app_id}/logs/events", json=body)
 
     assert first.json()["accepted_events"] == 1
+    assert first.json()["status"] == "processing"
     assert second.json()["accepted_events"] == 0
     assert second.json()["skipped_duplicates"] == 1
+    assert second.json()["status"] == "completed"
 
 
 def test_invalid_events_increment_rejected_events(client: TestClient) -> None:

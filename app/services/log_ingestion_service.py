@@ -124,14 +124,15 @@ class LogIngestionService:
             accepted_events += inserted
             skipped_duplicates += skipped
 
-        finalized = self.run_repo.finalize(
+        status = "processing" if accepted_events > 0 else "completed"
+        finalized = self.run_repo.update_request_counters(
             self.db,
             run,
             total_lines=total_lines,
             accepted_events=accepted_events,
             rejected_events=rejected_events,
             skipped_duplicates=skipped_duplicates,
-            status="completed",
+            status=status,
         )
 
         return IngestionResponse(

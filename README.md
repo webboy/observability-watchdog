@@ -17,6 +17,13 @@ API-first Intelligent Observability & Event Watchdog MVP.
 - Request-time log ingestion (upload, batch, validate)
 - App CRUD endpoints
 
+## Phase 3 Status
+
+- FastAPI `BackgroundTasks` post-processing after ingestion
+- Fixed 10-minute `MetricWindow` aggregation from raw log events
+- Baseline anomaly detection with global/app rule inheritance
+- Ingestion run polling endpoint for async completion
+
 ## Quick Start
 
 ```bash
@@ -43,6 +50,9 @@ API docs: http://localhost:8000/docs
 - `POST /api/v1/apps/{app_id}/logs/upload` — upload ECS JSONL file
 - `POST /api/v1/apps/{app_id}/logs/events` — ingest JSON event batch
 - `POST /api/v1/apps/{app_id}/logs/validate` — dry-run validation
+- `GET /api/v1/apps/{app_id}/ingestion-runs/{ingestion_run_id}` — poll ingestion status
+
+Ingestion with new events returns `status: processing`; poll the ingestion-run endpoint until `completed`.
 
 Example:
 
