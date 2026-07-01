@@ -206,3 +206,17 @@ In our incident summary API response: add `generation_source` to the summary sch
 - Updated `IncidentSummaryService` to label providers (`Gemini (...)`, `OpenAI (...)`, `Deterministic Template (Fallback)`) and resolve `business_impact` from JSON, summary text, or service heuristics.
 - Fixed incident summary API to use `build_summary_read()` instead of hardcoding `business_impact=None`.
 - Added/updated tests for generation source, business impact parsing, and API response fields.
+
+## 2026-07-01 15:45 UTC+2
+
+**Prompt**
+
+commit the code and push it
+
+**Elapsed time:** ~01:40 (cumulative project time)
+
+**Changes**
+
+- Committed `10c9542` (`chore(make): add db-clear-data target for local resets`).
+- Committed `c833d66` (`fix(incidents): add generation_source and populate business_impact`).
+- Pushed both commits to `origin/main`.
