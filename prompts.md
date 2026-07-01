@@ -93,3 +93,35 @@ Phase 1 completed, commit and push the code.
 **Changes**
 
 - Commit Phase 1 implementation and push to remote.
+
+## 2026-07-01 14:05 UTC+2
+
+**Prompt**
+
+Phase 2: Log Ingestion And ECS Parsing — Implement the plan as specified (ECS parser, dedupe service, log ingestion service, app CRUD, log upload/events/validate endpoints, tests).
+
+**Elapsed time:** 00:41
+
+**Changes**
+
+- Added schemas: `app/schemas/app.py`, `app/schemas/log_ingestion.py`.
+- Added repositories: `app_repository`, `ingestion_run_repository`, `log_event_repository` with PostgreSQL `ON CONFLICT DO NOTHING` + `RETURNING`.
+- Added services: `ecs_parser.py`, `dedupe_service.py`, `log_ingestion_service.py`.
+- Added API routes: `app/api/apps.py`, `app/api/logs.py`; registered in `app/main.py`.
+- Added tests: `test_ecs_parser.py`, `test_dedupe_service.py`, `test_app_api.py`, `test_log_ingestion.py`, `conftest.py`.
+- Updated `README.md` with Phase 2 endpoints and examples.
+- Verified: 23/23 pytest tests passed.
+
+## 2026-07-01 14:15 UTC+2
+
+**Prompt**
+
+Please generate the sample dataset files data/sample_logs.jsonl (normal operations) and data/sample_incident_logs.jsonl (containing the checkout/payment incident) as specified in Section 3 and Section 9 of @project_brief_intelligent_observability_watchdog_v2.md, so we can use them for testing the ingestion API.
+
+**Elapsed time:** 00:51
+
+**Changes**
+
+- Generated `data/sample_logs.jsonl` with 540 ECS-compatible events across all five e-commerce services (90 minutes of normal operations, low error rates).
+- Generated `data/sample_incident_logs.jsonl` with 1040 events spanning baseline (10:00–11:20), payment incident spike on `/payments/charge` (11:30–11:50), and recovery (12:00–13:00).
+- Validated both files with the ECS parser (0 rejected lines).
