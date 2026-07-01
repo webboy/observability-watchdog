@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.config import Settings
 from app.models.anomaly import Anomaly
 from app.models.anomaly_rule import AnomalyRule
 from app.models.app import App
@@ -43,7 +44,10 @@ def _seed_anomaly_with_alert(db_session: Session, app_id: str) -> None:
     db_session.commit()
     db_session.refresh(anomaly)
 
-    enriched = IncidentSummaryService(db_session).enrich_anomalies([anomaly])
+    enriched = IncidentSummaryService(
+        db_session,
+        settings=Settings(llm_provider="template", gemini_api_key=None, openai_api_key=None),
+    ).enrich_anomalies([anomaly])
     AlertService(db_session).create_alerts_for_anomalies(uuid.UUID(app_id), enriched)
     db_session.commit()
 
@@ -95,6 +99,9 @@ def test_incident_summary_endpoint_returns_latest_summary(client: TestClient, db
     assert payload["items"][0]["summary"]
     assert payload["items"][0]["likely_cause"]
     assert payload["items"][0]["recommended_action"]
+    assert payload["items"][0]["business_impact"]
+    assert "revenue loss" in payload["items"][0]["business_impact"].lower()
+    assert payload["items"][0]["generation_source"] == "Deterministic Template (Fallback)"
 
 
 def test_alerts_endpoint_returns_404_for_missing_app(client: TestClient) -> None:

@@ -82,12 +82,16 @@ class AnomalyRepository:
         *,
         ai_summary: str,
         likely_cause: str | None,
+        business_impact: str | None,
         recommended_action: str | None,
+        generation_source: str,
     ) -> Anomaly:
         """Persist incident intelligence fields on an anomaly."""
         anomaly.ai_summary = ai_summary
         anomaly.likely_cause = likely_cause
+        anomaly.business_impact = business_impact
         anomaly.recommended_action = recommended_action
+        anomaly.generation_source = generation_source
         db.add(anomaly)
         db.flush()
         return anomaly

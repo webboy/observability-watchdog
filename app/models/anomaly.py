@@ -52,7 +52,9 @@ class Anomaly(Base, UUIDPrimaryKeyMixin):
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     ai_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     likely_cause: Mapped[str | None] = mapped_column(Text, nullable=True)
+    business_impact: Mapped[str | None] = mapped_column(Text, nullable=True)
     recommended_action: Mapped[str | None] = mapped_column(Text, nullable=True)
+    generation_source: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

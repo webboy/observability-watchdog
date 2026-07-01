@@ -11,7 +11,8 @@ from app.repositories.alert_repository import AlertRepository
 from app.repositories.anomaly_repository import AnomalyRepository
 from app.repositories.app_repository import AppRepository
 from app.schemas.alert import AlertListResponse, AlertRead
-from app.schemas.incident import IncidentSummaryRead, IncidentSummaryResponse
+from app.schemas.incident import IncidentSummaryResponse
+from app.services.incident_summary_service import IncidentSummaryService
 
 router = APIRouter(prefix=get_settings().api_v1_prefix, tags=["alerts"])
 app_repo = AppRepository()
@@ -61,25 +62,9 @@ def get_incident_summaries(
         severities=["CRITICAL", "WARNING"],
     )
 
-    items: list[IncidentSummaryRead] = []
-    for anomaly in anomalies:
-        if not anomaly.ai_summary:
-            continue
-        items.append(
-            IncidentSummaryRead(
-                anomaly_id=anomaly.id,
-                app_id=anomaly.app_id,
-                service_name=anomaly.service_name,
-                url_path=anomaly.url_path,
-                severity=anomaly.severity,
-                metric_name=anomaly.metric_name,
-                window_start=anomaly.window_start,
-                window_end=anomaly.window_end,
-                summary=anomaly.ai_summary,
-                what_happened=anomaly.ai_summary.split(".")[0] + ".",
-                likely_cause=anomaly.likely_cause,
-                recommended_action=anomaly.recommended_action,
-                business_impact=None,
-            )
-        )
+    items = [
+        IncidentSummaryService.build_summary_read(anomaly)
+        for anomaly in anomalies
+        if anomaly.ai_summary
+    ]
     return IncidentSummaryResponse(items=items)

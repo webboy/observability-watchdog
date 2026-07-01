@@ -24,6 +24,7 @@ class IncidentSummaryRead(BaseModel):
     likely_cause: str | None = None
     business_impact: str | None = None
     recommended_action: str | None = None
+    generation_source: str
 
 
 class IncidentSummaryResponse(BaseModel):

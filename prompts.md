@@ -165,3 +165,44 @@ Phase 4: Alerting And Incident Intelligence — Implement the plan (simulated al
 - Added tests: `test_alert_service.py`, `test_incident_summary_service.py`, `test_alert_api.py`; updated background processing tests.
 - Updated `README.md` with Phase 4 status and API documentation.
 - Verified: 47/47 pytest tests passed after migration `0003_add_alerts`.
+
+## 2026-07-01 15:15 UTC+2
+
+**Prompt**
+
+OK, create commits for phase 3 (I forgot) and phase 4, then push the code.
+
+**Elapsed time:** ~01:35 (cumulative project time)
+
+**Changes**
+
+- Created Phase 3 commit `7dc0234`: background processing, metric aggregation, anomaly detection, migration `0002`, and related tests.
+- Created Phase 4 commit `10b9f48`: simulated alerts, incident summaries, migration `0003`, alert/incident APIs, and related tests.
+- Pushed both commits to `origin/main`.
+
+## 2026-07-01 15:25 UTC+2
+
+**Prompt**
+
+Please add a db-clear-data target to our Makefile that executes a postgres SQL command via docker exec to truncate the dynamic tables (alerts, anomalies, ingestion_runs, metric_windows, log_events) using CASCADE, while keeping the apps table intact.
+
+**Elapsed time:** ~01:36 (cumulative project time)
+
+**Changes**
+
+- Added `db-clear-data` Makefile target using `docker compose exec` to truncate dynamic tables with `RESTART IDENTITY CASCADE`, preserving `apps` and seeded `anomaly_rules`.
+
+## 2026-07-01 15:40 UTC+2
+
+**Prompt**
+
+In our incident summary API response: add `generation_source` to the summary schema, fix `business_impact` returning null, update parsing in LLM and template paths, and update prompts.md.
+
+**Elapsed time:** ~01:38 (cumulative project time)
+
+**Changes**
+
+- Added `generation_source` and `business_impact` to `IncidentSummaryRead`; migration `0004_add_incident_summary_metadata` persists both on `anomalies`.
+- Updated `IncidentSummaryService` to label providers (`Gemini (...)`, `OpenAI (...)`, `Deterministic Template (Fallback)`) and resolve `business_impact` from JSON, summary text, or service heuristics.
+- Fixed incident summary API to use `build_summary_read()` instead of hardcoding `business_impact=None`.
+- Added/updated tests for generation source, business impact parsing, and API response fields.
