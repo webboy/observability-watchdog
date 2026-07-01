@@ -13,7 +13,10 @@ API_HOST ?= 0.0.0.0
 API_PORT ?= 8000
 DASHBOARD_PORT ?= 8501
 
-.PHONY: help install db db-down migrate api dashboard test up down logs
+POSTGRES_USER ?= watchdog
+POSTGRES_DB ?= watchdog
+
+.PHONY: help install db db-down db-clear-data migrate api dashboard test up down logs
 
 help: ## Show available targets
 	@echo "Observability Watchdog — development targets"
@@ -32,6 +35,10 @@ db: ## Start local PostgreSQL via Docker Compose
 
 db-down: ## Stop local PostgreSQL container
 	$(COMPOSE) stop db
+
+db-clear-data: db ## Truncate dynamic tables; keep apps and anomaly rules
+	$(COMPOSE) exec -T db psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c \
+		"TRUNCATE TABLE alerts, anomalies, ingestion_runs, metric_windows, log_events RESTART IDENTITY CASCADE;"
 
 migrate: install db ## Run Alembic migrations against the local database
 	$(ALEMBIC) upgrade head
