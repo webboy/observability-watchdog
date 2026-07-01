@@ -9,7 +9,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.alert import Alert
-from app.models.anomaly import Anomaly
 from app.models.ingestion_run import IngestionRun
 from app.models.log_event import LogEvent
 from app.models.metric_window import MetricWindow
@@ -19,6 +18,7 @@ from app.schemas.dashboard import (
     DashboardOverviewRead,
     TopFailingServiceRead,
 )
+from app.services.health_score_service import HealthScoreService
 
 
 class DashboardService:
@@ -51,39 +51,19 @@ class DashboardService:
             select(func.max(LogEvent.timestamp)).where(LogEvent.app_id == app_id)
         )
 
-        critical_count = 0
-        warning_count = 0
-        if latest_log_timestamp is not None:
-            score_window_start = latest_log_timestamp - timedelta(hours=24)
-            severity_counts = self.db.execute(
-                select(Anomaly.severity, func.count())
-                .where(
-                    Anomaly.app_id == app_id,
-                    Anomaly.window_end >= score_window_start,
-                    Anomaly.severity.in_(["CRITICAL", "WARNING"]),
-                )
-                .group_by(Anomaly.severity)
-            ).all()
-            for severity, count in severity_counts:
-                if severity == "CRITICAL":
-                    critical_count = int(count)
-                elif severity == "WARNING":
-                    warning_count = int(count)
-
-        active_anomalies = critical_count + warning_count
-        health_score = max(0, 100 - (25 * critical_count) - (10 * warning_count))
+        health = HealthScoreService(self.db).compute_for_app(app_id)
 
         return DashboardOverviewRead(
             total_logs=int(total_logs),
             accepted_events=int(ingestion_totals[0]),
             rejected_events=int(ingestion_totals[1]),
             skipped_duplicates=int(ingestion_totals[2]),
-            active_anomalies=active_anomalies,
+            active_anomalies=health.active_anomalies,
             triggered_alerts=int(triggered_alerts),
-            system_health_score=health_score,
+            system_health_score=health.system_health_score,
             latest_log_timestamp=latest_log_timestamp,
-            critical_anomalies_24h=critical_count,
-            warning_anomalies_24h=warning_count,
+            critical_anomalies_24h=health.critical_anomalies_24h,
+            warning_anomalies_24h=health.warning_anomalies_24h,
         )
 
     def get_top_failing_services(self, app_id: uuid.UUID, *, limit: int = 10) -> list[TopFailingServiceRead]:

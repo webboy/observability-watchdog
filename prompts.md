@@ -249,3 +249,59 @@ When I start the dashboard, ModuleNotFoundError: No module named 'dashboard' —
 
 - Fixed `dashboard/streamlit_app.py` to import `api_client` as a sibling module (Streamlit adds `dashboard/` to `sys.path`, not the repo root).
 - Added `dashboard/__init__.py` and set `PYTHONPATH=.` in the Makefile `dashboard` target.
+
+## 2026-07-01 18:30 UTC+2
+
+**Prompt**
+
+Phase 6 Testing And Validation Plan — Implement the plan (test DB isolation, expanded unit coverage, integration test, docs).
+
+**Elapsed time:** ~02:45 (cumulative project time)
+
+**Changes**
+
+- Added `TEST_DATABASE_URL`, `ALLOW_DEV_DB_TESTS`, and pytest safety checks in `tests/conftest.py`; reconfigured `SessionLocal` bind for background task visibility.
+- Added Makefile targets: `db-test`, `test-migrate`, `test-integration`; updated `make test` to use the test database.
+- Extracted `HealthScoreService` from dashboard overview logic.
+- Expanded tests in `test_ecs_parser.py`, `test_dedupe_service.py`, `test_metric_aggregation.py`, and `test_anomaly_detection.py`.
+- Added `tests/test_health_score.py` and `tests/test_integration.py`.
+- Updated `README.md`, `.env.example`, and anomaly repository stale-delete flush behavior.
+- Full suite: 92 tests passing via `make test`.
+
+## 2026-07-01 19:00 UTC+2
+
+**Prompt**
+
+Fix StarletteDeprecationWarning about httpx vs httpx2 when running tests.
+
+**Elapsed time:** ~02:50 (cumulative project time)
+
+**Changes**
+
+- Replaced `httpx` with `httpx2` in `requirements.txt` so Starlette/FastAPI TestClient uses the supported HTTP client.
+
+## 2026-07-01 19:10 UTC+2
+
+**Prompt**
+
+`make install` reports "Nothing to be done for 'install'" after requirements change.
+
+**Elapsed time:** ~02:52 (cumulative project time)
+
+**Changes**
+
+- Updated Makefile `install` target to always run `pip install -r requirements.txt` instead of skipping when `.venv/.installed` exists.
+
+## 2026-07-01 19:20 UTC+2
+
+**Prompt**
+
+Fix `make dashboard` output: gio browser error and Streamlit `use_container_width` deprecation warnings.
+
+**Elapsed time:** ~02:55 (cumulative project time)
+
+**Changes**
+
+- Replaced deprecated `use_container_width=True` with `width="stretch"` in `dashboard/streamlit_app.py`.
+- Added `.streamlit/config.toml` with headless mode and disabled usage stats collection.
+- Updated Makefile `dashboard` target with `--server.headless true` to avoid WSL `gio` browser launch errors.

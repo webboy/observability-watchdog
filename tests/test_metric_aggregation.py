@@ -3,11 +3,13 @@
 import uuid
 from datetime import datetime, timezone
 
+import pytest
 from sqlalchemy.orm import Session
 
 from app.models.app import App
 from app.models.ingestion_run import IngestionRun
 from app.models.log_event import LogEvent
+from app.models.metric_window import MetricWindow
 from app.services.metrics_aggregator import MetricsAggregator
 from app.services.window_utils import floor_to_window_start
 
@@ -124,3 +126,139 @@ def test_p95_latency_stored_in_milliseconds(db_session: Session) -> None:
     windows = MetricsAggregator(db_session).recompute_for_ingestion_run(run.id, app.id)
 
     assert windows[0].latency_p95_ms >= 400.0
+
+
+@pytest.mark.parametrize(
+    ("timestamp_minute", "expected_bucket_minute"),
+    [
+        (30, 30),
+        (39, 30),
+        (40, 40),
+    ],
+)
+def test_bucket_alignment_edge_cases(timestamp_minute: int, expected_bucket_minute: int) -> None:
+    """Timestamps should floor to the correct fixed 10-minute bucket."""
+    timestamp = datetime(2026, 6, 30, 11, timestamp_minute, 59, tzinfo=timezone.utc)
+    bucket = floor_to_window_start(timestamp)
+
+    assert bucket == datetime(2026, 6, 30, 11, expected_bucket_minute, 0, tzinfo=timezone.utc)
+
+
+def test_multi_bucket_ingestion_persists_two_windows(db_session: Session) -> None:
+    """Events spanning two buckets should create two metric windows."""
+    app = _create_app(db_session)
+    run = _create_run(db_session, app.id)
+    first_bucket = datetime(2026, 6, 30, 11, 30, tzinfo=timezone.utc)
+    second_bucket = datetime(2026, 6, 30, 11, 40, tzinfo=timezone.utc)
+
+    _add_event(db_session, app_id=app.id, run_id=run.id, timestamp=first_bucket.replace(minute=31))
+    _add_event(db_session, app_id=app.id, run_id=run.id, timestamp=second_bucket.replace(minute=41))
+    db_session.commit()
+
+    windows = MetricsAggregator(db_session).recompute_for_ingestion_run(run.id, app.id)
+
+    assert len(windows) == 2
+    assert {window.window_start for window in windows} == {first_bucket, second_bucket}
+
+
+def test_overlapping_upload_overwrites_stale_bucket_values(db_session: Session) -> None:
+    """Recomputation should overwrite stale bucket values instead of duplicating rows."""
+    app = _create_app(db_session)
+    run_one = _create_run(db_session, app.id)
+    run_two = _create_run(db_session, app.id)
+    bucket_start = datetime(2026, 6, 30, 11, 30, tzinfo=timezone.utc)
+
+    _add_event(db_session, app_id=app.id, run_id=run_one.id, timestamp=bucket_start.replace(minute=31))
+    db_session.commit()
+    MetricsAggregator(db_session).recompute_for_ingestion_run(run_one.id, app.id)
+
+    _add_event(
+        db_session,
+        app_id=app.id,
+        run_id=run_two.id,
+        timestamp=bucket_start.replace(minute=33),
+        log_level="ERROR",
+        http_status_code=502,
+        error_type="UpstreamTimeout",
+    )
+    db_session.commit()
+    MetricsAggregator(db_session).recompute_for_ingestion_run(run_two.id, app.id)
+
+    windows = db_session.query(MetricWindow).filter(MetricWindow.app_id == app.id).all()
+
+    assert len(windows) == 1
+    assert windows[0].total_events == 2
+    assert windows[0].error_count == 1
+    assert windows[0].error_rate == 0.5
+    assert windows[0].http_5xx_rate == 0.5
+    assert windows[0].most_common_error_type == "UpstreamTimeout"
+
+
+def test_service_and_endpoint_grouping_creates_separate_windows(db_session: Session) -> None:
+    """Different service or endpoint scopes should create separate windows."""
+    app = _create_app(db_session)
+    run = _create_run(db_session, app.id)
+    bucket_start = datetime(2026, 6, 30, 11, 30, tzinfo=timezone.utc)
+
+    _add_event(
+        db_session,
+        app_id=app.id,
+        run_id=run.id,
+        timestamp=bucket_start.replace(minute=31),
+        service_name="payment-service",
+        url_path="/payments/charge",
+    )
+    _add_event(
+        db_session,
+        app_id=app.id,
+        run_id=run.id,
+        timestamp=bucket_start.replace(minute=32),
+        service_name="checkout-service",
+        url_path="/checkout/cart",
+    )
+    db_session.commit()
+
+    windows = MetricsAggregator(db_session).recompute_for_ingestion_run(run.id, app.id)
+
+    assert len(windows) == 2
+    scopes = {(window.service_name, window.url_path) for window in windows}
+    assert scopes == {
+        ("payment-service", "/payments/charge"),
+        ("checkout-service", "/checkout/cart"),
+    }
+
+
+def test_http_5xx_and_error_rates_are_computed(db_session: Session) -> None:
+    """Aggregation should compute error and HTTP 5xx rates from raw events."""
+    app = _create_app(db_session)
+    run = _create_run(db_session, app.id)
+    bucket_start = datetime(2026, 6, 30, 11, 30, tzinfo=timezone.utc)
+
+    _add_event(
+        db_session,
+        app_id=app.id,
+        run_id=run.id,
+        timestamp=bucket_start.replace(minute=31),
+        log_level="ERROR",
+        http_status_code=502,
+        error_type="UpstreamTimeout",
+    )
+    _add_event(
+        db_session,
+        app_id=app.id,
+        run_id=run.id,
+        timestamp=bucket_start.replace(minute=32),
+        log_level="INFO",
+        http_status_code=200,
+    )
+    db_session.commit()
+
+    windows = MetricsAggregator(db_session).recompute_for_ingestion_run(run.id, app.id)
+
+    assert len(windows) == 1
+    assert windows[0].error_count == 1
+    assert windows[0].error_rate == 0.5
+    assert windows[0].http_5xx_count == 1
+    assert windows[0].http_5xx_rate == 0.5
+    assert windows[0].unique_error_types == 1
+    assert windows[0].most_common_error_type == "UpstreamTimeout"

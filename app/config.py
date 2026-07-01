@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     app_name: str = "Observability Watchdog"
     environment: str = "development"
     database_url: str = "postgresql+psycopg://watchdog:watchdog@localhost:5432/watchdog"
+    test_database_url: str = "postgresql+psycopg://watchdog:watchdog@localhost:5432/watchdog_test"
+    allow_dev_db_tests: bool = False
     api_v1_prefix: str = "/api/v1"
     llm_provider: str = "template"
     gemini_api_key: str | None = None

@@ -67,7 +67,7 @@ def _render_sidebar(client: WatchdogApiClient) -> None:
             options=["production", "staging", "development"],
             key="create_app_environment",
         )
-        if st.button("Create App", use_container_width=True):
+        if st.button("Create App", width="stretch"):
             try:
                 created = client.create_app(name=name, slug=slug, environment=environment)
                 st.session_state.selected_app_id = created["id"]
@@ -77,7 +77,7 @@ def _render_sidebar(client: WatchdogApiClient) -> None:
             except ApiClientError as exc:
                 st.error(f"Create app failed: {exc}")
 
-    if st.sidebar.button("Refresh Dashboard", use_container_width=True):
+    if st.sidebar.button("Refresh Dashboard", width="stretch"):
         st.session_state.dashboard_ready = True
         st.rerun()
 
@@ -121,7 +121,7 @@ def _render_ingestion(client: WatchdogApiClient, app_id: str) -> None:
 
     with col_sample:
         st.write("Load bundled incident dataset")
-        if st.button("Load Sample Incident Dataset", use_container_width=True):
+        if st.button("Load Sample Incident Dataset", width="stretch"):
             try:
                 response = client.load_sample_dataset(app_id)
                 st.session_state.dashboard_ready = False
@@ -131,7 +131,7 @@ def _render_ingestion(client: WatchdogApiClient, app_id: str) -> None:
 
     with col_clear:
         st.write("Reset app-scoped dynamic data")
-        if st.button("Clear App Data", type="secondary", use_container_width=True):
+        if st.button("Clear App Data", type="secondary", width="stretch"):
             try:
                 result = client.clear_app_data(app_id)
                 st.session_state.latest_ingestion_run = None
@@ -229,7 +229,7 @@ def _render_health_trends(client: WatchdogApiClient, app_id: str) -> None:
             title="Error Count by Service",
         )
         fig.update_layout(hovermode="x unified")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     rate_df = _aggregate_windows_for_chart(windows, "http_5xx_rate", agg="mean")
     with tab_5xx:
@@ -242,7 +242,7 @@ def _render_health_trends(client: WatchdogApiClient, app_id: str) -> None:
             title="HTTP 5xx Rate by Service",
         )
         fig.update_layout(hovermode="x unified", yaxis_tickformat=".1%")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     latency_df = pd.DataFrame(windows)
     latency_df["window_start"] = pd.to_datetime(latency_df["window_start"])
@@ -261,7 +261,7 @@ def _render_health_trends(client: WatchdogApiClient, app_id: str) -> None:
                 title="P95 Latency (ms) by Service",
             )
             fig.update_layout(hovermode="x unified")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
 
 def _render_top_failing_services(client: WatchdogApiClient, app_id: str) -> None:
@@ -277,7 +277,7 @@ def _render_top_failing_services(client: WatchdogApiClient, app_id: str) -> None
         return
 
     frame = pd.DataFrame(services)
-    st.dataframe(frame, use_container_width=True, hide_index=True)
+    st.dataframe(frame, width="stretch", hide_index=True)
 
     chart_df = frame.sort_values("failure_score", ascending=True)
     fig = px.bar(
@@ -288,7 +288,7 @@ def _render_top_failing_services(client: WatchdogApiClient, app_id: str) -> None
         title="Failure Score by Service",
         hover_data=["error_count", "http_5xx_count", "avg_error_rate", "max_p95_latency_ms"],
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def _render_anomalies_and_alerts(client: WatchdogApiClient, app_id: str) -> None:
@@ -302,7 +302,7 @@ def _render_anomalies_and_alerts(client: WatchdogApiClient, app_id: str) -> None
             st.error(f"Failed to load anomalies: {exc}")
             anomalies = []
         if anomalies:
-            st.dataframe(pd.DataFrame(anomalies), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(anomalies), width="stretch", hide_index=True)
         else:
             st.info("No anomalies detected yet.")
 
@@ -326,7 +326,7 @@ def _render_anomalies_and_alerts(client: WatchdogApiClient, app_id: str) -> None
                         "message": payload.get("message"),
                     }
                 )
-            st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
             for alert in alerts:
                 with st.expander(f"Webhook payload {alert.get('id')}"):
                     st.code(json.dumps(alert.get("webhook_payload", {}), indent=2), language="json")
@@ -359,7 +359,7 @@ def _render_incident_summary(client: WatchdogApiClient, app_id: str) -> None:
 
     if len(summaries) > 1:
         with st.expander("Additional incident summaries"):
-            st.dataframe(pd.DataFrame(summaries[1:]), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(summaries[1:]), width="stretch", hide_index=True)
 
 
 def main() -> None:

@@ -39,6 +39,13 @@ API-first Intelligent Observability & Event Watchdog MVP.
 - Top failing services, anomalies/alerts tables, and incident summary panel
 - Demo endpoints: `POST /api/v1/apps/{app_id}/demo/load-sample-dataset`, `POST /api/v1/apps/{app_id}/demo/clear-data`
 
+## Phase 6 Status
+
+- Dedicated PostgreSQL test database (`watchdog_test`) with safety guard against dev DB truncation
+- Expanded unit coverage for ECS parser, dedupe, metric aggregation, anomaly detection, and health score
+- End-to-end integration test covering upload, polling, anomalies, alerts, summaries, and dashboard reads
+- Extracted `HealthScoreService` for deterministic health score calculations
+
 ## Quick Start
 
 ```bash
@@ -102,6 +109,8 @@ make dashboard
 
 Dashboard URL: http://localhost:8501
 
+On WSL/headless environments Streamlit does not auto-open a browser; open the URL above manually.
+
 Recommended demo flow:
 
 1. Create or select an app in the sidebar.
@@ -137,9 +146,31 @@ curl -X POST http://localhost:8000/api/v1/apps/<app_id>/logs/events \
 make help
 make install
 make db
+make db-test
 make migrate
+make test-migrate
 make api
 make dashboard
+make test
+make test-integration
+```
+
+### Test Database Safety
+
+Pytest uses a dedicated test database by default:
+
+```text
+TEST_DATABASE_URL=postgresql+psycopg://watchdog:watchdog@localhost:5432/watchdog_test
+```
+
+`make test` runs `db-test`, `test-migrate`, and pytest against that database. Tests truncate dynamic tables between cases and refuse to run unless the database name contains `test`, unless you explicitly set `ALLOW_DEV_DB_TESTS=1`.
+
+Recommended validation sequence:
+
+```bash
+make db
+make db-test
+make test-migrate
 make test
 ```
 

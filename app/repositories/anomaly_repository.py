@@ -59,6 +59,7 @@ class AnomalyRepository:
         )
         if existing is not None:
             db.delete(existing)
+            db.flush()
 
     @staticmethod
     def list_for_app(
