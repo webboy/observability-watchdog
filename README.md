@@ -1,69 +1,264 @@
 # Observability Watchdog
 
-API-first Intelligent Observability & Event Watchdog MVP.
+This project is an **API-first Intelligent Observability & Event Watchdog MVP**. It ingests ECS-compatible JSONL application logs, stores normalized events in PostgreSQL, detects service-level error and latency anomalies using an explainable baseline scoring pipeline, creates simulated webhook alerts, and visualizes health trends through a Streamlit dashboard.
 
-## Phase 1 Status
+The system supports multiple monitored applications. Each application acts as an observability boundary, while individual services are extracted from the ECS `service.name` field.
 
-- FastAPI application skeleton
-- PostgreSQL via Docker Compose
-- SQLAlchemy models: `App`, `IngestionRun`, `LogEvent`
-- Alembic migration for core tables
-- Health endpoints: `/health`, `/api/v1/health`
+The anomaly detection logic is isolated behind an `AnomalyDetectionService` so the detection strategy can evolve without changing ingestion, storage, alerting, or dashboard code.
 
-## Phase 2 Status
+**No paid cloud resources are used.** The project runs locally with Docker Compose.
 
-- ECS-compatible JSONL/JSON parser with dotted and nested field support
-- SHA-256 dedupe keys with PostgreSQL `ON CONFLICT DO NOTHING`
-- Request-time log ingestion (upload, batch, validate)
-- App CRUD endpoints
+---
 
-## Phase 3 Status
+## What This Project Is (and Is Not)
 
-- FastAPI `BackgroundTasks` post-processing after ingestion
-- Fixed 10-minute `MetricWindow` aggregation from raw log events
-- Baseline anomaly detection with global/app rule inheritance
-- Ingestion run polling endpoint for async completion
+| In scope | Out of scope |
+|---|---|
+| Local API-first SRE watchdog | Production observability platform |
+| ECS JSONL ingestion and validation | Real cloud log shipping |
+| Explainable baseline anomaly detection | Black-box ML/LLM alert decisions |
+| Simulated webhook alerts | Slack/PagerDuty delivery |
+| Optional LLM incident summaries | Required paid LLM API keys |
+| Streamlit dashboard over REST APIs | Multi-tenant SaaS deployment |
 
-## Phase 4 Status
+---
 
-- Simulated webhook alerts persisted from WARNING/CRITICAL anomalies
-- Idempotent alert creation keyed by `anomaly_id`
-- Incident summary enrichment with Gemini/OpenAI optional providers and template fallback
-- Alert listing and incident summary API endpoints
+## Architecture At A Glance
 
-## Phase 5 Status
+```text
+ECS JSONL -> LogEvent -> MetricWindow -> Anomaly -> Alert -> Dashboard
+                              \-> Incident Summary (optional LLM)
+```
 
-- Streamlit dashboard client (`dashboard/streamlit_app.py`) using FastAPI endpoints only
-- App selector, ingestion controls, async polling, overview metrics, and health trends
-- Plotly charts for errors, HTTP 5xx rate, and p95 latency
-- Top failing services, anomalies/alerts tables, and incident summary panel
-- Demo endpoints: `POST /api/v1/apps/{app_id}/demo/load-sample-dataset`, `POST /api/v1/apps/{app_id}/demo/clear-data`
+For the full design, see [architecture.md](architecture.md).
 
-## Phase 6 Status
+---
 
-- Dedicated PostgreSQL test database (`watchdog_test`) with safety guard against dev DB truncation
-- Expanded unit coverage for ECS parser, dedupe, metric aggregation, anomaly detection, and health score
-- End-to-end integration test covering upload, polling, anomalies, alerts, summaries, and dashboard reads
-- Extracted `HealthScoreService` for deterministic health score calculations
+## Prerequisites
 
-## Quick Start
+- Python 3.12+
+- Docker and Docker Compose
+- Make (optional, recommended)
+
+---
+
+## Quick Start (Local Development)
 
 ```bash
 cp .env.example .env
-docker compose up -d db
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload
+make install
+make db
+make migrate
+make api          # terminal 1 — http://localhost:8000/docs
+make dashboard    # terminal 2 — http://localhost:8501
 ```
 
-API docs: http://localhost:8000/docs
+On WSL/headless environments Streamlit does not auto-open a browser; open http://localhost:8501 manually.
 
-## Health Checks
+---
 
-- `GET /health` — basic app health
-- `GET /api/v1/health` — app health with database connectivity
+## Docker Compose (API + Database)
 
-## App And Ingestion API
+Start the full stack with PostgreSQL and the FastAPI service:
+
+```bash
+cp .env.example .env
+docker compose up --build
+# or
+make up
+```
+
+- API docs: http://localhost:8000/docs
+- Health: http://localhost:8000/health and http://localhost:8000/api/v1/health
+
+The dashboard still runs locally via `make dashboard` because it is a separate Streamlit client.
+
+---
+
+## Makefile Commands
+
+```bash
+make help              # list all targets
+make install           # create .venv and install dependencies
+make db                # start PostgreSQL container
+make migrate           # run Alembic migrations
+make api               # run FastAPI with auto-reload
+make dashboard         # run Streamlit dashboard
+make test              # run full pytest suite (uses watchdog_test DB)
+make test-integration  # run end-to-end integration test only
+make db-clear-data     # truncate dynamic tables, keep apps and rules
+make up                # docker compose up --build
+make down              # stop Docker Compose stack
+```
+
+---
+
+## Demo Walkthrough
+
+1. Start the API and database (`make db`, `make migrate`, `make api`).
+2. Start the dashboard (`make dashboard`).
+3. Create or select an app in the sidebar.
+4. Click **Load Sample Incident Dataset** (uses `data/sample_incident_logs.jsonl`).
+5. Wait for ingestion polling to complete (`status: completed`).
+6. Review overview metrics, health trends, anomalies, alerts, and incident summary.
+7. Use **Clear App Data** to reset the selected app without deleting it.
+
+Sample datasets:
+
+- `data/sample_logs.jsonl` — baseline traffic
+- `data/sample_incident_logs.jsonl` — incident scenario with error/latency spikes
+
+---
+
+## Log Format (ECS-Compatible JSONL)
+
+Logs are ingested as JSONL/NDJSON with ECS-compatible fields. The parser accepts both **flat dotted keys** and **nested JSON objects**.
+
+### Required fields
+
+| ECS field | Normalized column |
+|---|---|
+| `@timestamp` | `timestamp` (UTC-aware) |
+| `log.level` | `log_level` |
+| `message` | `message` |
+| `service.name` | `service_name` |
+
+### Optional fields
+
+| ECS field | Normalized column |
+|---|---|
+| `event.id` | `event_id` |
+| `event.dataset` | `event_dataset` |
+| `event.outcome` | `event_outcome` |
+| `event.duration` | `event_duration_ns` |
+| `http.response.status_code` | `http_status_code` |
+| `url.path` | `url_path` |
+| `trace.id` | `trace_id` |
+| `span.id` | `span_id` |
+| `transaction.id` | `transaction_id` |
+| `error.type` | `error_type` |
+| `error.message` | `error_message` |
+
+The full raw event is stored in `log_events.raw_event_json` (PostgreSQL JSONB).
+
+### Example event
+
+```json
+{
+  "@timestamp": "2026-06-30T12:01:00Z",
+  "log.level": "ERROR",
+  "message": "Payment timeout",
+  "service.name": "payment-service",
+  "http.response.status_code": 502,
+  "url.path": "/payments/charge",
+  "error.type": "UpstreamTimeout"
+}
+```
+
+---
+
+## Data Pipeline
+
+### 1. Ingestion (`LogEvent`)
+
+- Upload JSONL, batch JSON, or validate-only dry run.
+- Parser normalizes ECS fields and rejects invalid events.
+- Deduplication uses app-scoped `event.id` when present, otherwise SHA-256 of canonical normalized fields.
+- PostgreSQL `ON CONFLICT DO NOTHING` on `(app_id, dedupe_key)` skips duplicates.
+- Ingestion returns `status: processing` when new events are accepted.
+
+### 2. Background post-processing
+
+After ingestion, FastAPI `BackgroundTasks` runs:
+
+1. Metric aggregation into fixed 10-minute buckets
+2. Baseline anomaly detection
+3. Optional incident summary enrichment
+4. Simulated alert creation
+
+Poll `GET /api/v1/apps/{app_id}/ingestion-runs/{run_id}` until `completed`.
+
+### 3. Metric aggregation (`MetricWindow`)
+
+Raw events are aggregated into fixed **10-minute windows** scoped by:
+
+- `app_id`
+- `service_name`
+- `url_path`
+
+Computed metrics per window:
+
+- `total_events`, `error_count`, `error_rate`
+- `http_5xx_count`, `http_5xx_rate`
+- `latency_p95_ms` (from `event.duration` nanoseconds)
+- `unique_error_types`, `most_common_error_type`
+
+Overlapping uploads recompute affected buckets from all raw events (no duplicate windows).
+
+### 4. Anomaly detection (explainable, not black-box)
+
+Detection is rule-based and deterministic. **LLMs do not decide whether an anomaly exists.**
+
+For each metric window, the service:
+
+1. Resolves an app-specific rule, or falls back to a global default
+2. Computes baseline as the average of up to **six prior 10-minute windows** within the previous **60 minutes** relative to `window_start`
+3. Floors zero/missing baselines to `1.0` (cold-start guard)
+4. Calculates `anomaly_score = observed_value / baseline_value`
+5. Classifies severity:
+   - `WARNING` when score >= warning multiplier
+   - `CRITICAL` when score >= critical multiplier
+6. Suppresses low-volume windows below `min_event_count`
+7. Removes stale anomalies when metrics return to normal
+
+Default global rules:
+
+| Metric | Warning | Critical | Min events |
+|---|---|---|---|
+| `error_count` | 3.0x | 8.0x | 10 |
+| `http_5xx_rate` | 2.0x | 5.0x | 20 |
+| `latency_p95` | 2.0x | 4.0x | 20 |
+
+### 5. Alerts and incident intelligence
+
+- **Alerts**: simulated webhook payloads persisted from WARNING/CRITICAL anomalies (idempotent per `anomaly_id`).
+- **Incident summaries**: optional Gemini/OpenAI enrichment with deterministic template fallback when no API key is configured.
+
+**Important:** The LLM is used only in the incident intelligence layer to summarize detected anomalies, infer likely business impact, and suggest remediation. It is not the source of truth for anomaly decisions.
+
+### 6. Health score (relative time semantics)
+
+```text
+health_score = max(0, 100 - 25 × critical_count - 10 × warning_count)
+```
+
+The 24-hour scoring window is anchored to `MAX(log_events.timestamp)` for the selected app, **not** server wall-clock time.
+
+---
+
+## LLM Integration (Optional)
+
+Configure in `.env`:
+
+```text
+LLM_PROVIDER=template
+GEMINI_API_KEY=
+OPENAI_API_KEY=
+```
+
+| Provider | Behavior |
+|---|---|
+| `template` (default) | Deterministic summaries, no API key required |
+| `gemini` | Uses Gemini when `GEMINI_API_KEY` is set |
+| `openai` | Uses OpenAI when `OPENAI_API_KEY` is set |
+
+The project runs fully without any paid LLM API key.
+
+---
+
+## API Endpoints
+
+### Apps and ingestion
 
 - `POST /api/v1/apps` — create monitored app
 - `GET /api/v1/apps` — list apps
@@ -74,52 +269,12 @@ API docs: http://localhost:8000/docs
 - `POST /api/v1/apps/{app_id}/logs/validate` — dry-run validation
 - `GET /api/v1/apps/{app_id}/ingestion-runs/{ingestion_run_id}` — poll ingestion status
 
-Ingestion with new events returns `status: processing`; poll the ingestion-run endpoint until `completed`.
-
-## Alerts And Incident Intelligence
+### Alerts and incidents
 
 - `GET /api/v1/apps/{app_id}/alerts` — list simulated webhook alerts
 - `GET /api/v1/apps/{app_id}/incidents/summary` — latest enriched incident summaries
 
-Optional LLM settings in `.env`:
-
-```text
-LLM_PROVIDER=template
-GEMINI_API_KEY=
-OPENAI_API_KEY=
-```
-
-When no API key is configured, deterministic template summaries are used.
-
-```bash
-curl http://localhost:8000/api/v1/apps/<app_id>/alerts
-curl http://localhost:8000/api/v1/apps/<app_id>/incidents/summary
-```
-
-## Dashboard
-
-Start the API and database first, then launch the Streamlit dashboard:
-
-```bash
-make db
-make migrate
-make api
-make dashboard
-```
-
-Dashboard URL: http://localhost:8501
-
-On WSL/headless environments Streamlit does not auto-open a browser; open the URL above manually.
-
-Recommended demo flow:
-
-1. Create or select an app in the sidebar.
-2. Click **Load Sample Incident Dataset**.
-3. Wait for ingestion polling to complete.
-4. Review overview metrics, health trends, anomalies, alerts, and incident summary.
-5. Use **Clear App Data** to reset the selected app without deleting it.
-
-Dashboard API endpoints:
+### Dashboard
 
 - `GET /api/v1/apps/{app_id}/dashboard/overview`
 - `GET /api/v1/apps/{app_id}/dashboard/metric-windows`
@@ -128,56 +283,72 @@ Dashboard API endpoints:
 - `POST /api/v1/apps/{app_id}/demo/load-sample-dataset`
 - `POST /api/v1/apps/{app_id}/demo/clear-data`
 
-## App And Ingestion Examples
+---
+
+## Automated Tests
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/apps \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"E-commerce Platform","slug":"ecommerce-platform","environment":"production"}'
-
-curl -X POST http://localhost:8000/api/v1/apps/<app_id>/logs/events \
-  -H 'Content-Type: application/json' \
-  -d '{"events":[{"@timestamp":"2026-06-30T12:01:00Z","log.level":"ERROR","message":"Payment timeout","service.name":"payment-service"}]}'
-```
-
-## Development
-
-```bash
-make help
-make install
-make db
-make db-test
-make migrate
-make test-migrate
-make api
-make dashboard
 make test
-make test-integration
 ```
 
-### Test Database Safety
+This runs:
 
-Pytest uses a dedicated test database by default:
+1. `make db-test` — creates `watchdog_test` database if missing
+2. `make test-migrate` — applies Alembic migrations to the test DB
+3. `pytest` — 92+ tests against the isolated test database
+
+Tests refuse to truncate non-test databases unless `ALLOW_DEV_DB_TESTS=1` is set.
+
+```bash
+make test-integration   # end-to-end MVP flow only
+```
+
+---
+
+## Cloud Resources And Cost
+
+| Resource | Used? |
+|---|---|
+| Paid cloud database | No — local PostgreSQL via Docker Compose |
+| Paid cloud compute | No — local FastAPI and Streamlit |
+| Paid LLM API keys | Optional — template fallback works without keys |
+| Cloud decommissioning required | No — everything runs locally |
+
+---
+
+## Project Structure
 
 ```text
-TEST_DATABASE_URL=postgresql+psycopg://watchdog:watchdog@localhost:5432/watchdog_test
+app/                  FastAPI application (API, services, repositories, models)
+dashboard/            Streamlit client (calls API only)
+data/                 Sample ECS JSONL datasets
+migrations/           Alembic schema migrations
+tests/                Pytest suite
+architecture.md       System design document
+presentation.md       Markdown slide deck
+prompts.md            AI audit log (all prompts used during development)
 ```
 
-`make test` runs `db-test`, `test-migrate`, and pytest against that database. Tests truncate dynamic tables between cases and refuse to run unless the database name contains `test`, unless you explicitly set `ALLOW_DEV_DB_TESTS=1`.
+---
 
-Recommended validation sequence:
+## Final Submission Checklist
 
-```bash
-make db
-make db-test
-make test-migrate
-make test
-```
+- [x] Complete source code in public GitHub repository
+- [x] `prompts.md` with full AI audit log
+- [x] README with setup and demo instructions
+- [x] Architecture document (`architecture.md`)
+- [x] AI-generated presentation deck (`presentation.md`)
+- [x] Sample ECS-compatible JSONL logs (`data/sample_logs.jsonl`, `data/sample_incident_logs.jsonl`)
+- [x] Dashboard available locally (`make dashboard`)
+- [x] API docs available locally (`http://localhost:8000/docs`)
+- [ ] Tagle.ai result summary (submit separately as required by assignment)
+- [x] No paid cloud resources used
+- [x] No cloud resources need decommissioning
 
-Or use the full Docker Compose stack:
+---
 
-```bash
-make up
-```
+## Further Reading
 
-See `make help` for all available targets including the Streamlit dashboard (`make dashboard`, Phase 5).
+- [architecture.md](architecture.md) — data flow, schema, deduplication, async model
+- [presentation.md](presentation.md) — slide deck for demo/review
+- [project_brief_observability_watchdog.md](project_brief_observability_watchdog.md) — original assignment brief

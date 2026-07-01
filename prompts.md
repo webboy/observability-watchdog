@@ -305,3 +305,18 @@ Fix `make dashboard` output: gio browser error and Streamlit `use_container_widt
 - Replaced deprecated `use_container_width=True` with `width="stretch"` in `dashboard/streamlit_app.py`.
 - Added `.streamlit/config.toml` with headless mode and disabled usage stats collection.
 - Updated Makefile `dashboard` target with `--server.headless true` to avoid WSL `gio` browser launch errors.
+
+## 2026-07-01 20:00 UTC+2
+
+**Prompt**
+
+Phase 7 Documentation Plan — Implement final README, architecture.md, presentation.md, and submission checklist verification.
+
+**Elapsed time:** ~03:15 (cumulative project time)
+
+**Changes**
+
+- Rewrote [README.md](README.md) with final project positioning, setup instructions, ECS log format, data pipeline, explainable anomaly detection, LLM boundary, test commands, and submission checklist.
+- Created [architecture.md](architecture.md) with data-flow diagram, database schema/index details, deduplication strategy, BackgroundTasks vs Celery rationale, and relative time semantics.
+- Created [presentation.md](presentation.md) as a Markdown slide deck covering project context, architecture, key decisions, demo walkthrough, and SRE positioning.
+- Verified brief submission checklist: all repository-local items satisfied; Tagle.ai summary noted as separate submission.
