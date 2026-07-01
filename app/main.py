@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.alerts import router as alerts_router
 from app.api.apps import router as apps_router
+from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
 from app.api.logs import router as logs_router
 from app.config import get_settings
@@ -29,3 +30,4 @@ app.include_router(health_router)
 app.include_router(apps_router)
 app.include_router(logs_router)
 app.include_router(alerts_router)
+app.include_router(dashboard_router)

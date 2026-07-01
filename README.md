@@ -31,6 +31,14 @@ API-first Intelligent Observability & Event Watchdog MVP.
 - Incident summary enrichment with Gemini/OpenAI optional providers and template fallback
 - Alert listing and incident summary API endpoints
 
+## Phase 5 Status
+
+- Streamlit dashboard client (`dashboard/streamlit_app.py`) using FastAPI endpoints only
+- App selector, ingestion controls, async polling, overview metrics, and health trends
+- Plotly charts for errors, HTTP 5xx rate, and p95 latency
+- Top failing services, anomalies/alerts tables, and incident summary panel
+- Demo endpoints: `POST /api/v1/apps/{app_id}/demo/load-sample-dataset`, `POST /api/v1/apps/{app_id}/demo/clear-data`
+
 ## Quick Start
 
 ```bash
@@ -81,6 +89,36 @@ curl http://localhost:8000/api/v1/apps/<app_id>/alerts
 curl http://localhost:8000/api/v1/apps/<app_id>/incidents/summary
 ```
 
+## Dashboard
+
+Start the API and database first, then launch the Streamlit dashboard:
+
+```bash
+make db
+make migrate
+make api
+make dashboard
+```
+
+Dashboard URL: http://localhost:8501
+
+Recommended demo flow:
+
+1. Create or select an app in the sidebar.
+2. Click **Load Sample Incident Dataset**.
+3. Wait for ingestion polling to complete.
+4. Review overview metrics, health trends, anomalies, alerts, and incident summary.
+5. Use **Clear App Data** to reset the selected app without deleting it.
+
+Dashboard API endpoints:
+
+- `GET /api/v1/apps/{app_id}/dashboard/overview`
+- `GET /api/v1/apps/{app_id}/dashboard/metric-windows`
+- `GET /api/v1/apps/{app_id}/dashboard/top-failing-services`
+- `GET /api/v1/apps/{app_id}/dashboard/anomalies`
+- `POST /api/v1/apps/{app_id}/demo/load-sample-dataset`
+- `POST /api/v1/apps/{app_id}/demo/clear-data`
+
 ## App And Ingestion Examples
 
 ```bash
@@ -101,6 +139,7 @@ make install
 make db
 make migrate
 make api
+make dashboard
 make test
 ```
 

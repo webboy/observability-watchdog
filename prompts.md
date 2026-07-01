@@ -220,3 +220,32 @@ commit the code and push it
 - Committed `10c9542` (`chore(make): add db-clear-data target for local resets`).
 - Committed `c833d66` (`fix(incidents): add generation_source and populate business_impact`).
 - Pushed both commits to `origin/main`.
+
+## 2026-07-01 16:10 UTC+2
+
+**Prompt**
+
+Phase 5 Streamlit Dashboard Plan — Implement the plan (dashboard API, Streamlit UI, Plotly charts, demo endpoints, tests).
+
+**Elapsed time:** ~02:00 (cumulative project time)
+
+**Changes**
+
+- Added dashboard/demo API routes and schemas for overview, metric windows, top failing services, anomalies, sample load, and app data clearing.
+- Added `DashboardService`, `DemoService`, `dashboard/api_client.py`, and `dashboard/streamlit_app.py`.
+- Implemented Streamlit sections for app selector, ingestion, polling, overview metrics, Plotly health trends, top failing services, anomalies/alerts, and incident summary.
+- Added tests: `test_dashboard_api.py`, `test_dashboard_api_client.py`.
+- Updated `requirements.txt` and `README.md` with Phase 5 dashboard instructions.
+
+## 2026-07-01 16:20 UTC+2
+
+**Prompt**
+
+When I start the dashboard, ModuleNotFoundError: No module named 'dashboard' — find the issue, fix it.
+
+**Elapsed time:** ~02:05 (cumulative project time)
+
+**Changes**
+
+- Fixed `dashboard/streamlit_app.py` to import `api_client` as a sibling module (Streamlit adds `dashboard/` to `sys.path`, not the repo root).
+- Added `dashboard/__init__.py` and set `PYTHONPATH=.` in the Makefile `dashboard` target.

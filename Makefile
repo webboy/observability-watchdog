@@ -49,7 +49,7 @@ api: install ## Run FastAPI locally with auto-reload
 dashboard: install ## Run Streamlit dashboard locally
 	@test -f dashboard/streamlit_app.py || (echo "Error: dashboard/streamlit_app.py not found (Phase 5)." && exit 1)
 	@test -x $(STREAMLIT) || (echo "Error: streamlit is not installed. Add it to requirements.txt and run 'make install'." && exit 1)
-	$(STREAMLIT) run dashboard/streamlit_app.py --server.port $(DASHBOARD_PORT)
+	PYTHONPATH=. $(STREAMLIT) run dashboard/streamlit_app.py --server.port $(DASHBOARD_PORT)
 
 test: install ## Run pytest test suite
 	$(PYTEST) -v
