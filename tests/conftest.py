@@ -22,7 +22,7 @@ def db_session() -> Session:
     session = SessionLocal()
     session.execute(
         text(
-            "TRUNCATE TABLE anomalies, metric_windows, log_events, ingestion_runs, apps "
+            "TRUNCATE TABLE alerts, anomalies, metric_windows, log_events, ingestion_runs, apps "
             "RESTART IDENTITY CASCADE"
         )
     )

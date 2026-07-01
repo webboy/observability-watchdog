@@ -144,3 +144,24 @@ Phase 3: Background Post-Processing And Anomaly Detection — Implement the plan
 - Seeded global default anomaly rules via migration and `app/seeds/anomaly_rules.py`.
 - Added tests: `test_metric_aggregation.py`, `test_anomaly_detection.py`, `test_background_processing.py`; updated ingestion tests.
 - Verified: 33/33 pytest tests passed.
+
+## 2026-07-01 15:00 UTC+2
+
+**Prompt**
+
+Phase 4: Alerting And Incident Intelligence — Implement the plan (simulated alerts, incident summaries, LLM fallback, APIs, tests).
+
+**Elapsed time:** ~01:30 (cumulative project time)
+
+**Changes**
+
+- Added `Alert` model and migration `0003_add_alerts` with idempotent unique index on `anomaly_id`.
+- Added `AlertRepository`, `AlertService`, and `IncidentSummaryService` with Gemini/OpenAI optional providers and deterministic template fallback.
+- Extended `app/config.py`, `.env.example`, and `requirements.txt` with LLM settings and SDK dependencies.
+- Integrated incident enrichment and alert creation into `background_processing_service.py`; `alerts_triggered` now reflects created alerts.
+- Added API routes: `GET /api/v1/apps/{app_id}/alerts`, `GET /api/v1/apps/{app_id}/incidents/summary`.
+- Added schemas: `app/schemas/alert.py`, `app/schemas/incident.py`.
+- Extended `AnomalyRepository` with `list_for_app` and `update_summary_fields`.
+- Added tests: `test_alert_service.py`, `test_incident_summary_service.py`, `test_alert_api.py`; updated background processing tests.
+- Updated `README.md` with Phase 4 status and API documentation.
+- Verified: 47/47 pytest tests passed after migration `0003_add_alerts`.

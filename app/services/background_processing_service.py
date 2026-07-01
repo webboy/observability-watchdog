@@ -38,11 +38,17 @@ def process_ingestion_run(ingestion_run_id: uuid.UUID) -> None:
         detector = AnomalyDetectionService(db)
         anomalies = detector.detect_for_windows(affected_windows)
 
+        from app.services.incident_summary_service import IncidentSummaryService
+        from app.services.alert_service import AlertService
+
+        enriched_anomalies = IncidentSummaryService(db).enrich_anomalies(anomalies)
+        alerts = AlertService(db).create_alerts_for_anomalies(run.app_id, enriched_anomalies)
+
         run_repo.complete_processing(
             db,
             run,
-            detected_anomalies=len(anomalies),
-            alerts_triggered=0,
+            detected_anomalies=len(enriched_anomalies),
+            alerts_triggered=len(alerts),
         )
         db.commit()
     except Exception:

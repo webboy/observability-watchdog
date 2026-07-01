@@ -1,5 +1,6 @@
 """SQLAlchemy ORM models."""
 
+from app.models.alert import Alert
 from app.models.anomaly import Anomaly
 from app.models.anomaly_rule import AnomalyRule
 from app.models.app import App
@@ -9,6 +10,7 @@ from app.models.log_event import LogEvent
 from app.models.metric_window import MetricWindow
 
 __all__ = [
+    "Alert",
     "Anomaly",
     "AnomalyRule",
     "App",

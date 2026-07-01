@@ -24,6 +24,13 @@ API-first Intelligent Observability & Event Watchdog MVP.
 - Baseline anomaly detection with global/app rule inheritance
 - Ingestion run polling endpoint for async completion
 
+## Phase 4 Status
+
+- Simulated webhook alerts persisted from WARNING/CRITICAL anomalies
+- Idempotent alert creation keyed by `anomaly_id`
+- Incident summary enrichment with Gemini/OpenAI optional providers and template fallback
+- Alert listing and incident summary API endpoints
+
 ## Quick Start
 
 ```bash
@@ -54,7 +61,27 @@ API docs: http://localhost:8000/docs
 
 Ingestion with new events returns `status: processing`; poll the ingestion-run endpoint until `completed`.
 
-Example:
+## Alerts And Incident Intelligence
+
+- `GET /api/v1/apps/{app_id}/alerts` — list simulated webhook alerts
+- `GET /api/v1/apps/{app_id}/incidents/summary` — latest enriched incident summaries
+
+Optional LLM settings in `.env`:
+
+```text
+LLM_PROVIDER=template
+GEMINI_API_KEY=
+OPENAI_API_KEY=
+```
+
+When no API key is configured, deterministic template summaries are used.
+
+```bash
+curl http://localhost:8000/api/v1/apps/<app_id>/alerts
+curl http://localhost:8000/api/v1/apps/<app_id>/incidents/summary
+```
+
+## App And Ingestion Examples
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/apps \

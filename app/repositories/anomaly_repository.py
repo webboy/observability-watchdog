@@ -59,3 +59,35 @@ class AnomalyRepository:
         )
         if existing is not None:
             db.delete(existing)
+
+    @staticmethod
+    def list_for_app(
+        db: Session,
+        app_id,
+        *,
+        limit: int = 50,
+        severities: list[str] | None = None,
+    ) -> list[Anomaly]:
+        """Return latest anomalies for an app ordered by window start."""
+        stmt = select(Anomaly).where(Anomaly.app_id == app_id)
+        if severities:
+            stmt = stmt.where(Anomaly.severity.in_(severities))
+        stmt = stmt.order_by(Anomaly.window_start.desc(), Anomaly.created_at.desc()).limit(limit)
+        return list(db.scalars(stmt).all())
+
+    @staticmethod
+    def update_summary_fields(
+        db: Session,
+        anomaly: Anomaly,
+        *,
+        ai_summary: str,
+        likely_cause: str | None,
+        recommended_action: str | None,
+    ) -> Anomaly:
+        """Persist incident intelligence fields on an anomaly."""
+        anomaly.ai_summary = ai_summary
+        anomaly.likely_cause = likely_cause
+        anomaly.recommended_action = recommended_action
+        db.add(anomaly)
+        db.flush()
+        return anomaly

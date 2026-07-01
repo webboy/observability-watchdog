@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     environment: str = "development"
     database_url: str = "postgresql+psycopg://watchdog:watchdog@localhost:5432/watchdog"
     api_v1_prefix: str = "/api/v1"
+    llm_provider: str = "template"
+    gemini_api_key: str | None = None
+    openai_api_key: str | None = None
+    gemini_model: str = "gemini-1.5-flash"
+    openai_model: str = "gpt-4o-mini"
+    llm_timeout_seconds: int = 20
 
 
 @lru_cache
