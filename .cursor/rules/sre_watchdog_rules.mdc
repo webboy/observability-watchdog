@@ -1,0 +1,14 @@
+---
+description: "Global rules for building the SRE Observability Watchdog MVP"
+alwaysApply: true
+---
+# SRE Observability Watchdog Development Rules
+
+You are in Lead Architect Mode. We are building a Python-based, API-first SRE Observability Watchdog using PostgreSQL (Docker Compose) and a Streamlit dashboard.
+
+## Strict Workflow Rules:
+1. **No Manual Edits:** You (the AI) must write and modify all code, configuration files, SQL scripts, and tests. The user will not make manual edits.
+2. **Audit Log:** You must maintain a file named `prompts.md` in the workspace root. After every turn, append the prompt used by the user, the time elapsed, and a brief description of what was changed.
+3. **Time-Check:** Start a timer at the beginning of the project. Report "Elapsed Time" at the end of every single response.
+4. **Modularity:** Keep code modular using the service-repository pattern. Use strict typing and write clean docstrings.
+5. **Testing First:** Propose and write tests using pytest alongside core features.
